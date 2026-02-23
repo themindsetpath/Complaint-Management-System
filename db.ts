@@ -1,52 +1,40 @@
 
-import { User, Complaint, UserRole, ComplaintStatus, ComplaintCategory } from './types';
+import { User, Complaint, ComplaintStatus } from './types';
 
-const USERS_KEY = 'pmdc_users';
-const COMPLAINTS_KEY = 'pmdc_complaints';
-
-// Initial admin account
-const INITIAL_ADMIN: User = {
-  id: 'admin-001',
-  name: 'System Administrator',
-  email: 'admin@pmdc.edu',
-  role: UserRole.ADMIN,
-  password: 'adminpassword'
+export const initializeDB = async () => {
+  // Server handles initialization
 };
 
-export const initializeDB = () => {
-  if (!localStorage.getItem(USERS_KEY)) {
-    localStorage.setItem(USERS_KEY, JSON.stringify([INITIAL_ADMIN]));
-  }
-  if (!localStorage.getItem(COMPLAINTS_KEY)) {
-    localStorage.setItem(COMPLAINTS_KEY, JSON.stringify([]));
-  }
+export const getUsers = async (): Promise<User[]> => {
+  const res = await fetch('/api/users');
+  return res.json();
 };
 
-export const getUsers = (): User[] => JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-export const getComplaints = (): Complaint[] => JSON.parse(localStorage.getItem(COMPLAINTS_KEY) || '[]');
-
-export const saveUser = (user: User) => {
-  const users = getUsers();
-  users.push(user);
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+export const getComplaints = async (): Promise<Complaint[]> => {
+  const res = await fetch('/api/complaints');
+  return res.json();
 };
 
-export const saveComplaint = (complaint: Complaint) => {
-  const complaints = getComplaints();
-  complaints.unshift(complaint);
-  localStorage.setItem(COMPLAINTS_KEY, JSON.stringify(complaints));
+export const saveUser = async (user: User) => {
+  await fetch('/api/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(user),
+  });
 };
 
-export const updateComplaintStatus = (id: string, status: ComplaintStatus, notes?: string) => {
-  const complaints = getComplaints();
-  const index = complaints.findIndex(c => c.id === id);
-  if (index !== -1) {
-    complaints[index] = { 
-      ...complaints[index], 
-      status, 
-      adminNotes: notes || complaints[index].adminNotes,
-      updatedAt: new Date().toISOString() 
-    };
-    localStorage.setItem(COMPLAINTS_KEY, JSON.stringify(complaints));
-  }
+export const saveComplaint = async (complaint: Complaint) => {
+  await fetch('/api/complaints', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(complaint),
+  });
+};
+
+export const updateComplaintStatus = async (id: string, status: ComplaintStatus, notes?: string) => {
+  await fetch(`/api/complaints/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, adminNotes: notes }),
+  });
 };

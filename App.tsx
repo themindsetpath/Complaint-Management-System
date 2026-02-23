@@ -45,15 +45,29 @@ const App: React.FC = () => {
       setCurrentUser(JSON.parse(storedUser));
     }
     refreshComplaints();
+
+    // WebSocket for real-time updates
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'COMPLAINT_CREATED' || data.type === 'COMPLAINT_UPDATED') {
+        refreshComplaints();
+      }
+    };
+
+    return () => ws.close();
   }, []);
 
-  const refreshComplaints = useCallback(() => {
-    setComplaints(getComplaints());
+  const refreshComplaints = useCallback(async () => {
+    const data = await getComplaints();
+    setComplaints(data);
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const users = getUsers();
+    const users = await getUsers();
     const user = users.find(u => u.email === loginData.email && u.password === loginData.password);
     
     if (user) {
@@ -65,9 +79,9 @@ const App: React.FC = () => {
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    const users = getUsers();
+    const users = await getUsers();
     if (users.find(u => u.email === regData.email)) {
       setAuthError('User with this email already exists.');
       return;
@@ -82,7 +96,7 @@ const App: React.FC = () => {
       password: regData.password
     };
 
-    saveUser(newUser);
+    await saveUser(newUser);
     setCurrentUser(newUser);
     localStorage.setItem('pmdc_active_user', JSON.stringify(newUser));
     setAuthError('');
@@ -116,15 +130,15 @@ const App: React.FC = () => {
       sentiment
     };
 
-    saveComplaint(complaint);
+    await saveComplaint(complaint);
     setNewComplaint({ title: '', category: ComplaintCategory.OTHER, description: '' });
     setSubmitting(false);
     setActiveTab('dashboard');
     refreshComplaints();
   };
 
-  const handleStatusUpdate = (id: string, status: ComplaintStatus) => {
-    updateComplaintStatus(id, status);
+  const handleStatusUpdate = async (id: string, status: ComplaintStatus) => {
+    await updateComplaintStatus(id, status);
     refreshComplaints();
   };
 
@@ -456,7 +470,7 @@ const App: React.FC = () => {
                       </div>
                       
                       <h3 className="text-2xl font-extrabold text-slate-900 mb-3 group-hover:text-indigo-600 transition-colors">{complaint.title}</h3>
-                      <p className="text-slate-600 text-base leading-relaxed line-clamp-2 hover:line-clamp-none transition-all duration-500 cursor-pointer font-medium">
+                      <p className={`text-slate-600 text-base leading-relaxed transition-all duration-500 cursor-pointer font-medium ${currentUser.role === UserRole.ADMIN ? '' : 'line-clamp-2 hover:line-clamp-none'}`}>
                         {complaint.description}
                       </p>
                       
