@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { motion } from 'motion/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { Complaint, ComplaintCategory } from '../types';
 
@@ -22,20 +23,43 @@ const StatsView: React.FC<StatsViewProps> = ({ complaints }) => {
   ];
 
   return (
-    <div className="space-y-8">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-8"
+    >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <h3 className="text-lg font-bold text-slate-800 mb-6">Complaints by Category</h3>
-          <div className="h-[300px] w-full">
+        <motion.div 
+          whileHover={{ y: -5 }}
+          className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200"
+        >
+          <h3 className="text-xl font-bold text-slate-800 mb-8">Complaints by Category</h3>
+          <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={categoryData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
+                  dy={10}
                 />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
+                />
+                <Tooltip 
+                  cursor={{ fill: '#f8fafc' }}
+                  contentStyle={{ 
+                    borderRadius: '16px', 
+                    border: 'none', 
+                    boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+                    padding: '12px 16px'
+                  }}
+                />
+                <Bar dataKey="count" radius={[8, 8, 0, 0]} barSize={40}>
                   {categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
@@ -43,41 +67,51 @@ const StatsView: React.FC<StatsViewProps> = ({ complaints }) => {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <h3 className="text-lg font-bold text-slate-800 mb-6">Resolution Status</h3>
-          <div className="h-[300px] w-full">
+        <motion.div 
+          whileHover={{ y: -5 }}
+          className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200"
+        >
+          <h3 className="text-xl font-bold text-slate-800 mb-8">Resolution Status</h3>
+          <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={statusData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
+                  innerRadius={80}
+                  outerRadius={120}
+                  paddingAngle={8}
                   dataKey="count"
+                  stroke="none"
                 >
                   {statusData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  contentStyle={{ 
+                    borderRadius: '16px', 
+                    border: 'none', 
+                    boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' 
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex justify-center gap-6 mt-4">
+          <div className="flex flex-wrap justify-center gap-8 mt-6">
             {statusData.map((item) => (
-              <div key={item.name} className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className="text-sm font-medium text-slate-600">{item.name}: {item.count}</span>
+              <div key={item.name} className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-lg shadow-sm" style={{ backgroundColor: item.color }} />
+                <span className="text-sm font-bold text-slate-600">{item.name}: {item.count}</span>
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
