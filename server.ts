@@ -45,6 +45,12 @@ app.get("/api/users", (req, res) => {
   res.json(users);
 });
 
+app.delete("/api/users/:id", (req, res) => {
+  const { id } = req.params;
+  users = users.filter(u => u.id !== id);
+  res.status(204).send();
+});
+
 app.post("/api/users", (req, res) => {
   const newUser = req.body;
   users.push(newUser);

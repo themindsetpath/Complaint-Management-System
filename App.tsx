@@ -14,17 +14,20 @@ import {
   saveUser, 
   saveComplaint, 
   updateComplaintStatus, 
+  deleteUser,
   initializeDB 
 } from './db';
 import { CATEGORY_COLORS, STATUS_COLORS, Icons } from './constants';
 import Layout from './components/Layout';
 import StatsView from './components/StatsView';
+import UsersView from './components/UsersView';
 import { analyzeComplaint } from './geminiService';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isRegistering, setIsRegistering] = useState(false);
   const [authError, setAuthError] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('All');
@@ -45,6 +48,7 @@ const App: React.FC = () => {
       setCurrentUser(JSON.parse(storedUser));
     }
     refreshComplaints();
+    refreshUsers();
 
     // WebSocket for real-time updates
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -65,41 +69,59 @@ const App: React.FC = () => {
     setComplaints(data);
   }, []);
 
+  const refreshUsers = useCallback(async () => {
+    const data = await getUsers();
+    setAllUsers(data);
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const users = await getUsers();
-    const user = users.find(u => u.email === loginData.email && u.password === loginData.password);
-    
-    if (user) {
-      setCurrentUser(user);
-      localStorage.setItem('pmdc_active_user', JSON.stringify(user));
-      setAuthError('');
-    } else {
-      setAuthError('Invalid credentials. Please try again.');
+    setAuthError('');
+    try {
+      const users = await getUsers();
+      const user = users.find(u => u.email === loginData.email && u.password === loginData.password);
+      
+      if (user) {
+        setCurrentUser(user);
+        localStorage.setItem('pmdc_active_user', JSON.stringify(user));
+        setAuthError('');
+      } else {
+        setAuthError('Invalid credentials. Please try again.');
+      }
+    } catch (err) {
+      setAuthError('Connection error. Please check if the server is running.');
+      console.error(err);
     }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    const users = await getUsers();
-    if (users.find(u => u.email === regData.email)) {
-      setAuthError('User with this email already exists.');
-      return;
-    }
-
-    const newUser: User = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: regData.name,
-      email: regData.email,
-      rollNumber: regData.rollNo,
-      role: UserRole.STUDENT,
-      password: regData.password
-    };
-
-    await saveUser(newUser);
-    setCurrentUser(newUser);
-    localStorage.setItem('pmdc_active_user', JSON.stringify(newUser));
     setAuthError('');
+    try {
+      const users = await getUsers();
+      if (users.find(u => u.email === regData.email)) {
+        setAuthError('User with this email already exists.');
+        return;
+      }
+
+      const newUser: User = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: regData.name,
+        email: regData.email,
+        rollNumber: regData.rollNo,
+        role: UserRole.STUDENT,
+        password: regData.password
+      };
+
+      await saveUser(newUser);
+      setCurrentUser(newUser);
+      localStorage.setItem('pmdc_active_user', JSON.stringify(newUser));
+      setAuthError('');
+      refreshUsers();
+    } catch (err) {
+      setAuthError('Registration failed. Please try again.');
+      console.error(err);
+    }
   };
 
   const handleLogout = () => {
@@ -140,6 +162,11 @@ const App: React.FC = () => {
   const handleStatusUpdate = async (id: string, status: ComplaintStatus) => {
     await updateComplaintStatus(id, status);
     refreshComplaints();
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    await deleteUser(id);
+    refreshUsers();
   };
 
   const filteredComplaints = complaints.filter(c => {
@@ -298,13 +325,18 @@ const App: React.FC = () => {
       <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            {activeTab === 'dashboard' ? 'Complaint Dashboard' : activeTab === 'stats' ? 'Analytical Overview' : 'Submit New Complaint'}
+            {activeTab === 'dashboard' ? 'Complaint Dashboard' : 
+             activeTab === 'stats' ? 'Analytical Overview' : 
+             activeTab === 'users' ? 'Student Management' :
+             'Submit New Complaint'}
           </h2>
           <p className="text-slate-500 mt-1 font-medium">
             {activeTab === 'dashboard' 
               ? `${currentUser.role === UserRole.ADMIN ? 'Manage all student grievances' : 'Track your submitted issues'} (${filteredComplaints.length})` 
               : activeTab === 'stats' 
               ? 'Real-time reporting on college environment' 
+              : activeTab === 'users'
+              ? 'View and manage registered student accounts'
               : 'Tell us what’s on your mind'}
           </p>
         </div>
@@ -341,6 +373,7 @@ const App: React.FC = () => {
       </header>
 
       {activeTab === 'stats' && <StatsView complaints={complaints} />}
+      {activeTab === 'users' && <UsersView users={allUsers} onDeleteUser={handleDeleteUser} />}
 
       {activeTab === 'new' && (
         <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm max-w-2xl">

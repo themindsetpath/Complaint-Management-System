@@ -23,6 +23,12 @@ export const saveUser = async (user: User) => {
   });
 };
 
+export const deleteUser = async (id: string) => {
+  await fetch(`/api/users/${id}`, {
+    method: 'DELETE',
+  });
+};
+
 export const saveComplaint = async (complaint: Complaint) => {
   await fetch('/api/complaints', {
     method: 'POST',
